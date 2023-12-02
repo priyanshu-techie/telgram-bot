@@ -1,7 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api';   
 import axios from 'axios';
 import { config } from 'dotenv';
-import {generateOutput, handleButtonClick} from './utils';
+import {generateOutput} from './utils.js';
 config({path:'./.env'});
 
 const telegramToken = process.env.TELEGRAM_TOKEN;
@@ -16,6 +16,26 @@ const inlineKeyboard = {
     ]
 };
 
+const handleButtonClick = (callbackQuery)=>{
+    try {
+        const data = callbackQuery.data;
+        let newMessage ='';
+        // Perform some operation based on the button clicked
+        if (data === 'moveBack') {
+            // Do something for button1
+            newMessage = "button 1 clicked!";
+        } else if (data === 'moveForward') {
+            // Do something for button2
+            newMessage = "button 2 clicked!";
+        }
+        bot.editMessageText(newMessage, { chat_id: callbackQuery.message.chat.id, message_id: callbackQuery.message.message_id });
+    } catch (error) {
+        console.log("button pressing error:   ",error);
+    }
+}
+
+bot.on('callback_query', handleButtonClick);
+
 bot.on("message",async(msg)=>{
     const chatId = msg.chat.id;
     const messageText = msg.text.toString().toLowerCase();
@@ -29,14 +49,9 @@ bot.on("message",async(msg)=>{
         const data = await resp.data; 
         let index = 0;
         let output =  generateOutput(data,index);
-        await bot.sendMessage(chatId, output,{parse_mode:"HTML", reply_markup:inlineKeyboard})
-            .then(sentMessage => {
-                            // Set up a callback query listener to handle button clicks
-                            bot.on('callback_query', handleButtonClick);
-                })
-            .catch(err => console.log("error sending message ",err));
-
-        bot.sendAudio(chatId, data[0].phonetics[0].audio).catch(e=>console.log("no audio found"));
+        await bot.sendMessage(chatId, output,{parse_mode:"HTML", reply_markup:JSON.stringify(inlineKeyboard)})
+        if(!data[0].phonetics && !data[0].phonetics[0].audio)
+            bot.sendAudio(chatId, data[0].phonetics[0].audio).catch(e=>console.log("no audio found"));
         
     } catch (error) {
         if (error.response && error.response.status === 404) {
@@ -54,22 +69,4 @@ bot.on("message",async(msg)=>{
 
 
 
-
-
-
-
-
-
-// bot.on('message',(msg)=>{
-//     const chatId = msg.chat.id;
-//     // Send a message with the inline keyboard
-//     bot.sendMessage(chatId, 'Click a button:', { reply_markup: inlineKeyboard })
-//         .then(sentMessage => {
-//             // Set up a callback query listener to handle button clicks
-//             bot.on('callback_query', handleButtonClick);
-//         })
-//         .catch(error => {
-//             console.error('Error sending message:', error);
-//         });
-// })
 
