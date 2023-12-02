@@ -1,7 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api';   
 import axios from 'axios';
 import { config } from 'dotenv';
-import {generateOutput, handleButtonClick} from './utils';
+import OutputClass from './utils.js';
 config({path:'./.env'});
 
 const telegramToken = process.env.TELEGRAM_TOKEN;
@@ -28,11 +28,12 @@ bot.on("message",async(msg)=>{
         const resp = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${messageText}`);
         const data = await resp.data; 
         let index = 0;
-        let output =  generateOutput(data,index);
+        let outputObject = new OutputClass(data,index,bot);
+        let output = outputObject.generateOutput();
         await bot.sendMessage(chatId, output,{parse_mode:"HTML", reply_markup:inlineKeyboard})
             .then(sentMessage => {
                             // Set up a callback query listener to handle button clicks
-                            bot.on('callback_query', handleButtonClick);
+                            bot.on('callback_query', outputObject.handleButtonClick);
                 })
             .catch(err => console.log("error sending message ",err));
 
