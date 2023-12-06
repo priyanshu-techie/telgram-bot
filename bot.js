@@ -1,12 +1,46 @@
-import TelegramBot from 'node-telegram-bot-api';   
 import axios from 'axios';
-import { config } from 'dotenv';
-import OutputClass from './utils.js';
-config({path:'./.env'});
+import botConfig from './configBot.js';
 
-const telegramToken = process.env.TELEGRAM_TOKEN;
+const bot = botConfig();
 
-const bot = new TelegramBot(telegramToken,{polling:true});
+class OutputClass{
+    constructor(data,index){
+        this.data =data;
+        this.index = index;
+        this.length = data.length;
+    }
+    
+    generateOutput(){
+        let output = `(${this.data[this.index].meanings[0].partOfSpeech})\n`;
+        this.data[this.index].meanings[0].definitions.forEach((e,ind) => {
+            output += `<b>${ind+1}</b>. ${e.definition}\n \t ${e.example?`<i>->${e.example}</i>`:""} \n \n`;
+        })
+        return output;
+    }
+// Function to handle button clicks
+    handleButtonClick(callbackQuery) {
+        try {
+            const data = callbackQuery.data;
+            let newMessage ='';
+            // Perform some operation based on the button clicked
+            if (data === 'moveBack') {
+                if(this.index>0){
+                    this.index--;
+                    newMessage = this.generateOutput();
+                }
+            } else if (data === 'moveForward') {
+                if(this.index< (this.length)-1){
+                    this.index++;                    
+                    newMessage = this.generateOutput();
+                }
+            }
+            // if(newMessage !== '')
+                bot.editMessageText(newMessage, { chat_id: callbackQuery.message.chat.id, message_id: callbackQuery.message.message_id });
+        } catch (error) {
+            console.error('Error handling button click:', error);
+        }
+    };
+}
 
 // Set up the inline keyboard
 const inlineKeyboard = {
@@ -26,18 +60,16 @@ bot.on("message",async(msg)=>{
     }
     try {
         const resp = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${messageText}`);
-        const data = await resp.data; 
-        let index = 0;
-        let outputObject = new OutputClass(data,index,bot);
+        const data = await resp.data;
+        let index = 2;
+        let outputObject = new OutputClass(data,index);
         let output = outputObject.generateOutput();
-        await bot.sendMessage(chatId, output,{parse_mode:"HTML", reply_markup:inlineKeyboard})
-            .then(sentMessage => {
-                            // Set up a callback query listener to handle button clicks
-                            bot.on('callback_query', outputObject.handleButtonClick);
-                })
-            .catch(err => console.log("error sending message ",err));
+        await bot.sendMessage(chatId, output,{parse_mode:"HTML", reply_markup:JSON.stringify(inlineKeyboard)})
+        bot.on('callback_query', outputObject.handleButtonClick);
 
-        bot.sendAudio(chatId, data[0].phonetics[0].audio).catch(e=>console.log("no audio found"));
+        // sending the audio if availiable :
+        if(!data[0].phonetics && !data[0].phonetics[0].audio)
+            bot.sendAudio(chatId, data[0].phonetics[0].audio).catch(e=>console.log("no audio found"));
         
     } catch (error) {
         if (error.response && error.response.status === 404) {
@@ -48,29 +80,3 @@ bot.on("message",async(msg)=>{
         }
     }
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
-// bot.on('message',(msg)=>{
-//     const chatId = msg.chat.id;
-//     // Send a message with the inline keyboard
-//     bot.sendMessage(chatId, 'Click a button:', { reply_markup: inlineKeyboard })
-//         .then(sentMessage => {
-//             // Set up a callback query listener to handle button clicks
-//             bot.on('callback_query', handleButtonClick);
-//         })
-//         .catch(error => {
-//             console.error('Error sending message:', error);
-//         });
-// })
-
