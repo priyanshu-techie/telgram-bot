@@ -50,8 +50,9 @@ bot.on("message",async(msg)=>{
         let index = 0;
         let output =  generateOutput(data,index);
         await bot.sendMessage(chatId, output,{parse_mode:"HTML", reply_markup:JSON.stringify(inlineKeyboard)})
-        if(!data[0].phonetics && !data[0].phonetics[0].audio)
+        if(data[0].phonetics!==undefined && data[0].phonetics[0].audio!==undefined){
             bot.sendAudio(chatId, data[0].phonetics[0].audio).catch(e=>console.log("no audio found"));
+        }
         
     } catch (error) {
         if (error.response && error.response.status === 404) {
