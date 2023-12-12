@@ -1,5 +1,19 @@
 import axios from 'axios';
 import botConfig from './configBot.js';
+import http from 'http';
+import url from 'url';
+
+// just creating a server to keep active 
+http.createServer((req,res)=>{
+    let parsedUrl = url.parse(req.url,true);
+    const path = parsedUrl.pathname;
+
+    if(path === '/'){
+    res.writeHead(200,{'Content-type':'text/html'})
+    res.write("hello world");
+    res.end();
+    }
+}).listen(3000);
 
 const bot = botConfig();
     
