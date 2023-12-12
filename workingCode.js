@@ -1,3 +1,8 @@
+// this deals with adding inline button , it was troublining me. So i postponded it .
+// implement this later on.
+
+
+
 import TelegramBot from 'node-telegram-bot-api';   
 import axios from 'axios';
 import { config } from 'dotenv';
