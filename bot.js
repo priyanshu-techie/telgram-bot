@@ -1,40 +1,15 @@
-import TelegramBot from 'node-telegram-bot-api';   
 import axios from 'axios';
-import { config } from 'dotenv';
-import {generateOutput} from './utils.js';
-config({path:'./.env'});
+import botConfig from './configBot.js';
 
-const telegramToken = process.env.TELEGRAM_TOKEN;
-
-const bot = new TelegramBot(telegramToken,{polling:true});
-
-// Set up the inline keyboard
-const inlineKeyboard = {
-    inline_keyboard: [
-        [{ text: '<<', callback_data: 'moveBack' }],
-        [{ text: '>>', callback_data: 'moveForward' }],
-    ]
-};
-
-const handleButtonClick = (callbackQuery)=>{
-    try {
-        const data = callbackQuery.data;
-        let newMessage ='';
-        // Perform some operation based on the button clicked
-        if (data === 'moveBack') {
-            // Do something for button1
-            newMessage = "button 1 clicked!";
-        } else if (data === 'moveForward') {
-            // Do something for button2
-            newMessage = "button 2 clicked!";
-        }
-        bot.editMessageText(newMessage, { chat_id: callbackQuery.message.chat.id, message_id: callbackQuery.message.message_id });
-    } catch (error) {
-        console.log("button pressing error:   ",error);
-    }
+const bot = botConfig();
+    
+function generateOutput(data){
+    let output = `(${data[0].meanings[0].partOfSpeech})\n`;
+    data[0].meanings[0].definitions.forEach((e,ind) => {
+    output += `<b>${ind+1}</b>. ${e.definition}\n \t ${e.example?`<i>->${e.example}</i>`:""} \n \n`;
+    })
+    return output;
 }
-
-bot.on('callback_query', handleButtonClick);
 
 bot.on("message",async(msg)=>{
     const chatId = msg.chat.id;
@@ -47,13 +22,13 @@ bot.on("message",async(msg)=>{
     try {
         const resp = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${messageText}`);
         const data = await resp.data; 
-        let index = 0;
-        let output =  generateOutput(data,index);
-        await bot.sendMessage(chatId, output,{parse_mode:"HTML", reply_markup:JSON.stringify(inlineKeyboard)})
+
+        let output =  generateOutput(data);
+        await bot.sendMessage(chatId, output,{parse_mode:"HTML"})
+        // sending the audio if availiable :
         if(data[0].phonetics!==undefined && data[0].phonetics[0].audio!==undefined){
             bot.sendAudio(chatId, data[0].phonetics[0].audio).catch(e=>console.log("no audio found"));
         }
-        
     } catch (error) {
         if (error.response && error.response.status === 404) {
             bot.sendMessage(chatId, "Sorry, the word was not found in the dictionary 😔😔. \n<b>NOTE:</b> sentences are not allowed, send a word.",{ parse_mode: "HTML" });
